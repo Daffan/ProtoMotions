@@ -24,6 +24,7 @@ import mink
 from poselib.skeleton.skeleton3d import SkeletonMotion, SkeletonState, SkeletonTree
 
 from tqdm import tqdm
+import time
 
 
 @dataclass
@@ -64,20 +65,44 @@ _H1_KEYPOINT_TO_JOINT = {
     "R_Shoulder": {"name": "right_shoulder_pitch_link", "weight": 1.0},
 }
 
+_T1_KEYPOINT_TO_JOINT = {
+    # We provide higher weight to the "end of graph nodes" as they are more important for recovering the overall motion
+    "Head": {"name": "H2", "weight": 3.0},
+    "Pelvis": {"name": "Waist", "weight": 1.0},
+    "L_Hip": {"name": "Hip_Pitch_Left", "weight": 1.0},
+    "R_Hip": {"name": "Hip_Pitch_Right", "weight": 1.0},
+    "L_Knee": {"name": "Shank_Left", "weight": 1.0},
+    "R_Knee": {"name": "Shank_Right", "weight": 1.0},
+    "L_Ankle": {"name": "left_foot_link", "weight": 3.0},
+    "R_Ankle": {"name": "right_foot_link", "weight": 3.0},
+    "L_Toe": {"name": "left_toe_link", "weight": 3.0},
+    "R_Toe": {"name": "right_toe_link", "weight": 3.0},
+    "L_Elbow": {"name": "left_hand_link", "weight": 3.0},
+    "R_Elbow": {"name": "right_hand_link", "weight": 3.0},
+    "L_Wrist": {"name": "left_wrist_link", "weight": 3.0},
+    "R_Wrist": {"name": "right_wrist_link", "weight": 3.0},
+    "L_Shoulder": {"name": "AL2", "weight": 1.0},
+    "R_Shoulder": {"name": "AR2", "weight": 1.0},
+}
+
 _KEYPOINT_TO_JOINT_MAP = {
     "h1": _H1_KEYPOINT_TO_JOINT,
+    "t1": _T1_KEYPOINT_TO_JOINT,
 }
 
 _RESCALE_FACTOR = {
     "h1": np.array([1.0, 1.0, 1.1]),
+    "t1": np.array([0.75, 0.75, 0.70]),
 }
 
 _OFFSET = {
     "h1": 0.0,
+    "t1": -0.0,
 }
 
 _ROOT_LINK = {
     "h1": "pelvis",
+    "t1": "Trunk",
 }
 
 _H1_VELOCITY_LIMITS = {
@@ -102,8 +127,36 @@ _H1_VELOCITY_LIMITS = {
     "right_elbow_joint": 20,
 }
 
+# [12.56, 12.56, 18.84, 18.84, 18.84, 18.84, 18.84, 18.84, 18.84, 18.84, 10.88, 12.5, 10.9, 10.9, 11.7, 18.8, 12.4, 12.5, 10.9, 10.9, 11.7, 18.8, 12.4]
+_T1_VELOCITY_LIMITS = {
+    "AAHead_yaw": 12.56,
+    "Head_pitch": 12.56,
+    "Right_Shoulder_Pitch": 18.84,
+    "Right_Shoulder_Roll": 18.84,
+    "Right_Elbow_Pitch": 18.84,
+    "Right_Elbow_Yaw": 18.84,
+    "Left_Shoulder_Pitch": 18.84,
+    "Left_Shoulder_Roll": 18.84,
+    "Left_Elbow_Pitch": 18.84,
+    "Left_Elbow_Yaw": 18.84,
+    "Waist": 10.88,
+    "Left_Hip_Pitch": 12.5,
+    "Left_Hip_Roll": 10.9,
+    "Left_Hip_Yaw": 10.9,
+    "Left_Knee_Pitch": 11.7,
+    "Left_Ankle_Pitch": 18.8,
+    "Left_Ankle_Roll": 12.4,
+    "Right_Hip_Pitch": 12.5,
+    "Right_Hip_Roll": 10.9,
+    "Right_Hip_Yaw": 10.9,
+    "Right_Knee_Pitch": 11.7,
+    "Right_Ankle_Pitch": 18.8,
+    "Right_Ankle_Roll": 12.4,
+}
+
 _VEL_LIMITS = {
     "h1": _H1_VELOCITY_LIMITS,
+    "t1": _T1_VELOCITY_LIMITS
 }
 
 
@@ -196,6 +249,15 @@ def construct_model(robot_name: str, keypoint_names: Sequence[str]):
             xyaxes="-1.000 -0.002 -0.000 0.000 -0.103 0.995",
             mode="trackcom",
         )
+    elif robot_name == "t1":
+        humanoid_mjcf = mjcf.from_path("protomotions/data/assets/mjcf/t1.xml")
+        humanoid_mjcf.worldbody.add(
+            "camera",
+            name="front_track",
+            pos="-1.120 3.232 2.064",
+            xyaxes="-1.000 -0.002 -0.000 0.000 -0.103 0.995",
+            mode="trackcom",
+        )
     else:
         raise ValueError(f"Unknown robot name: {robot_name}")
     root.include_copy(humanoid_mjcf)
@@ -257,7 +319,7 @@ def to_string(
     return xml_string.decode()
 
 
-def get_assets(root: mjcf.RootElement) -> dict[str, bytes]:
+def get_assets(root):
     assets = {}
     for file, payload in root.get_assets().items():
         name, extension = file.split(".")
@@ -333,6 +395,73 @@ def create_h1_motion(
     }
     return curr_motion
 
+def create_t1_motion(
+    poses: np.ndarray, trans: np.ndarray, orig_global_trans: np.ndarray, mocap_fr: float
+) -> SkeletonMotion:
+    """Create a SkeletonMotion for T1 robot from poses and translations.
+    Args:
+        poses: Joint angles from mujoco [N, num_dof] in proper ordering - groups of 3 hinge joints per joint
+        trans: Root transform [N, 7] (pos + quat)
+        orig_global_trans: Original global translations [N, num_joints, 3]
+        mocap_fr: Motion capture framerate
+    Returns:
+        SkeletonMotion: Motion data in proper format for H1
+    """
+    from data.scripts.retargeting.torch_humanoid_batch import Humanoid_Batch
+    from data.scripts.retargeting.config import get_config
+
+    # Initialize H1 humanoid batch with config
+    cfg = get_config("t1")
+    humanoid_batch = Humanoid_Batch(cfg)
+
+    # Convert poses to proper format
+    B, seq_len = 1, poses.shape[0]
+
+    # Convert to tensor format
+    poses_tensor = torch.from_numpy(poses).float().reshape(B, seq_len, -1, 1)
+
+    # Add root rotation from trans quaternion
+    root_rot = sRot.from_quat(np.roll(trans[:, 3:7], -1)).as_rotvec()
+    root_rot_tensor = torch.from_numpy(root_rot).float().reshape(B, seq_len, 1, 3)
+
+    # Combine root rotation with joint poses
+    poses_tensor = torch.cat(
+        [
+            root_rot_tensor,
+            humanoid_batch.dof_axis * poses_tensor,
+            torch.zeros((1, seq_len, len(cfg.extend_config), 3)),
+        ],
+        axis=2,
+    )
+
+    # Prepare root translation
+    trans_tensor = torch.from_numpy(trans[:, :3]).float().reshape(B, seq_len, 3)
+
+    # Perform forward kinematics
+    motion_data = humanoid_batch.fk_batch(
+        poses_tensor, trans_tensor, return_full=True, dt=1.0 / mocap_fr
+    )
+
+    # Convert back to proper kinematic structure
+    fk_return_proper = humanoid_batch.convert_to_proper_kinematic(motion_data)
+
+    # Get lowest heights for both original and retargeted motions
+    orig_lowest_heights = torch.from_numpy(orig_global_trans[..., 2].min(axis=1))
+    retarget_lowest_heights = (
+        fk_return_proper.global_translation[..., 2].min(dim=-1).values
+    )
+
+    # Calculate height adjustment to match original motion's lowest points
+    height_offset = (retarget_lowest_heights - orig_lowest_heights).unsqueeze(-1)
+
+    # Adjust global translations to match original heights
+    fk_return_proper.global_translation[..., 2] -= height_offset
+
+    curr_motion = {
+        k: v.squeeze().detach().cpu() if torch.is_tensor(v) else v
+        for k, v in fk_return_proper.items()
+    }
+    return curr_motion
 
 def create_skeleton_motion(
     poses: np.ndarray,
@@ -413,7 +542,7 @@ def retarget_motion(motion: SkeletonMotion, robot_type: str, render: bool = Fals
 
     frame_tasks = {}
     for joint_name, retarget_info in _KEYPOINT_TO_JOINT_MAP[robot_type].items():
-        if robot_type == "h1":
+        if robot_type == "h1" or robot_type == "t1":
             orientation_base_cost = 0
         else:
             orientation_base_cost = 0.0001
@@ -491,6 +620,7 @@ def retarget_motion(motion: SkeletonMotion, robot_type: str, render: bool = Fals
                 for i, (joint_name, retarget_info) in enumerate(
                     _KEYPOINT_TO_JOINT_MAP[robot_type].items()
                 ):
+                    # import ipdb; ipdb.set_trace()
                     body_idx = smplx_mujoco_joint_names.index(joint_name)
                     target_pos = global_translations[max(0, t), body_idx, :].copy()
 
@@ -509,7 +639,7 @@ def retarget_motion(motion: SkeletonMotion, robot_type: str, render: bool = Fals
                 # Update keypoint positions.
                 keypoint_pos = {}
                 for keypoint_name, keypoint in zip(
-                    smplx_mujoco_joint_names, global_translations[max(0, t)]
+                    smplx_mujoco_joint_names, global_translations[max(0, t)] * _RESCALE_FACTOR[robot_type] + _OFFSET[robot_type]
                 ):
                     mid = model.body(f"keypoint_{keypoint_name}").mocapid[0]
                     data.mocap_pos[mid] = keypoint
@@ -562,6 +692,10 @@ def retarget_motion(motion: SkeletonMotion, robot_type: str, render: bool = Fals
         return create_h1_motion(
             retargeted_poses, retargeted_trans, global_translations, fps
         )
+    elif robot_type == "t1":
+        return create_t1_motion(
+            retargeted_poses, retargeted_trans, global_translations, fps
+        )
     else:
         skeleton_tree = SkeletonTree.from_mjcf(
             f"protomotions/data/assets/mjcf/{robot_type}.xml"
@@ -574,7 +708,7 @@ def retarget_motion(motion: SkeletonMotion, robot_type: str, render: bool = Fals
 
 
 def manually_retarget_motion(
-    amass_data: str, output_path: str, robot_type: str, render: bool = False
+    amass_data: str, output_path: str, robot_type: str, render: bool = True
 ):
     # Store retargeted motion data
     motion_data = dict(np.load(open(amass_data, "rb"), allow_pickle=True))
@@ -687,7 +821,7 @@ def manually_retarget_motion(
     )
     new_sk_motion = SkeletonMotion.from_skeleton_state(new_sk_state, fps=30)
     sk_motion = retarget_motion(new_sk_motion, robot_type, render=render)
-    if robot_type == "h1":
+    if robot_type == "h1" or robot_type == "t1":
         torch.save(sk_motion, output_path)
     else:
         sk_motion.to_file(output_path)

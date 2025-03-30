@@ -124,7 +124,7 @@ def main(
     total_files_to_process = 0
     processed_files = 0
     for folder_name in folder_names:
-        if "retarget" in folder_name or "smpl" in folder_name or "h1" in folder_name:
+        if "retarget" in folder_name or "smpl" in folder_name or "h1" in folder_name or "t1" in folder_name:
             continue
         data_dir = amass_root_dir / folder_name
         output_dir = amass_root_dir / f"{folder_name}-{append_name}"
@@ -162,7 +162,7 @@ def main(
     print(f"Total files to process: {total_files_to_process}/{total_files}")
 
     for folder_name in folder_names:
-        if "retarget" in folder_name or "smpl" in folder_name or "h1" in folder_name:
+        if "retarget" in folder_name or "smpl" in folder_name or "h1" in folder_name or "t1" in folder_name:
             # Ignore folders where we store motions retargeted to AMP
             continue
 
@@ -416,7 +416,7 @@ def main(
                             outpath.stem + "_flipped" + outpath.suffix
                         )
                     print(f"Saving to {outpath}")
-                    if robot_type == "h1":
+                    if robot_type == "h1" or robot_type == "t1":
                         torch.save(new_sk_motion, str(outpath))
                     else:
                         new_sk_motion.to_file(str(outpath))

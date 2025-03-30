@@ -240,6 +240,42 @@ def smplx_with_limits_mapping():
         asset_file=asset_file,
     )
 
+def t1_mapping():
+    #### Config for extension
+    extend_config = [
+        {
+            "joint_name": "left_toe_link",
+            "parent_name": "left_foot_link",
+            "pos": [0.08, 0.0, 0.0],
+            "rot": [1.0, 0.0, 0.0, 0.0],
+        },
+        {
+            "joint_name": "left_wrist_link",
+            "parent_name": "left_hand_link",
+            "pos": [0.0, 0.1471, 0.0],
+            "rot": [1.0, 0.0, 0.0, 0.0],
+        },
+        {
+            "joint_name": "right_toe_link",
+            "parent_name": "right_foot_link",
+            "pos": [0.08, 0.0, 0.0],
+            "rot": [1.0, 0.0, 0.0, 0.0],
+        },
+        {
+            "joint_name": "right_wrist_link",
+            "parent_name": "right_hand_link",
+            "pos": [0.0, -0.1471, 0.0],
+            "rot": [1.0, 0.0, 0.0, 0.0]
+        }
+    ]
+
+    asset_file = "protomotions/data/assets/mjcf/t1_original.xml"
+
+    return EasyDict(
+        extend_config=extend_config,
+        asset_file=asset_file,
+    )
+
 
 def get_config(humanoid_type: str):
     if humanoid_type == "h1":
@@ -250,5 +286,7 @@ def get_config(humanoid_type: str):
         return h1_no_head_no_hands_mapping()
     elif humanoid_type == "smplx_humanoid_with_limits":
         return smplx_with_limits_mapping()
+    elif humanoid_type == "t1":
+        return t1_mapping()
     else:
         raise NotImplementedError
