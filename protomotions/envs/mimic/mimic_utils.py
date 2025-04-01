@@ -45,16 +45,16 @@ def mul_exp_mean(x: Tensor, coef: float, mean_before_exp: bool):
 
 @torch.jit.script_if_tracing  # This is important to ensure it doesn't compile the omega config early.
 def exp_tracking_reward(
-    gt: Tensor,
-    rt: Tensor,
-    rv: Tensor,
-    rav: Tensor,
-    gv: Tensor,
-    gav: Tensor,
-    kb: Tensor,
-    gr: Tensor,
-    lr: Tensor,
-    dv: Tensor,
+    gt: Tensor,  # global translation
+    rt: Tensor,  # root translation
+    rv: Tensor,  # root velocity
+    rav: Tensor, # root angular velocity
+    gv: Tensor,  # global velocity
+    gav: Tensor, # global angular velocity
+    kb: Tensor,  # key body ?
+    gr: Tensor,  # global rotation
+    lr: Tensor,  # local rotation
+    dv: Tensor,  # dof velocity
     ref_gt: Tensor,
     ref_rt: Tensor,
     ref_rv: Tensor,
