@@ -291,6 +291,9 @@ class Humanoid_Batch:
         return_dict.global_angular_velocity = return_dict.global_angular_velocity[
             ..., self.extend_to_proper_mapping, :
         ]
+        return_dict.local_rotation = return_dict.local_rotation[
+            ..., self.extend_to_proper_mapping, :
+        ]
         return return_dict
 
     def forward_kinematics_batch(self, rotations, root_rotations, root_positions):

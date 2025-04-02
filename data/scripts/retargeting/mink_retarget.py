@@ -425,22 +425,37 @@ def create_t1_motion(
     root_rot_tensor = torch.from_numpy(root_rot).float().reshape(B, seq_len, 1, 3)
 
     # Combine root rotation with joint poses
-    poses_tensor = torch.cat(
+    fw_poses_tensor = torch.cat(
         [
             root_rot_tensor,
             humanoid_batch.dof_axis * poses_tensor,
             torch.zeros((1, seq_len, len(cfg.extend_config), 3)),
         ],
         axis=2,
-    )
+    )  # axis representation of the rotation
 
     # Prepare root translation
     trans_tensor = torch.from_numpy(trans[:, :3]).float().reshape(B, seq_len, 3)
 
     # Perform forward kinematics
     motion_data = humanoid_batch.fk_batch(
-        poses_tensor, trans_tensor, return_full=True, dt=1.0 / mocap_fr
+        fw_poses_tensor, trans_tensor, return_full=True, dt=1.0 / mocap_fr
     )
+
+    # Fix the local rotation so it's always y-axis
+    import smpl_sim.utils.rotation_conversions as tRot
+    y_axis = humanoid_batch.dof_axis.clone()
+    y_axis[:, 0] = 0.0; y_axis[:, 1] = 1.0; y_axis[:, 2] = 0.0;  
+    poses_tensor_fix = torch.cat(
+        [
+            root_rot_tensor,
+            y_axis * poses_tensor,
+            torch.zeros((1, seq_len, len(cfg.extend_config), 3)),
+        ],
+        axis=2,
+    )  # axis representation of the rotation
+    pose_quat = tRot.axis_angle_to_quaternion(poses_tensor_fix.clone())
+    motion_data.local_rotation = tRot.wxyz_to_xyzw(pose_quat)
 
     # Convert back to proper kinematic structure
     fk_return_proper = humanoid_batch.convert_to_proper_kinematic(motion_data)
@@ -708,7 +723,7 @@ def retarget_motion(motion: SkeletonMotion, robot_type: str, render: bool = Fals
 
 
 def manually_retarget_motion(
-    amass_data: str, output_path: str, robot_type: str, render: bool = True
+    amass_data: str, output_path: str, robot_type: str, render: bool = False
 ):
     # Store retargeted motion data
     motion_data = dict(np.load(open(amass_data, "rb"), allow_pickle=True))

@@ -250,15 +250,15 @@ def t1_mapping():
             "rot": [1.0, 0.0, 0.0, 0.0],
         },
         {
-            "joint_name": "left_wrist_link",
-            "parent_name": "left_hand_link",
-            "pos": [0.0, 0.1471, 0.0],
-            "rot": [1.0, 0.0, 0.0, 0.0],
-        },
-        {
             "joint_name": "right_toe_link",
             "parent_name": "right_foot_link",
             "pos": [0.08, 0.0, 0.0],
+            "rot": [1.0, 0.0, 0.0, 0.0],
+        },
+        {
+            "joint_name": "left_wrist_link",
+            "parent_name": "left_hand_link",
+            "pos": [0.0, 0.1471, 0.0],
             "rot": [1.0, 0.0, 0.0, 0.0],
         },
         {
@@ -268,8 +268,10 @@ def t1_mapping():
             "rot": [1.0, 0.0, 0.0, 0.0]
         }
     ]
+    # extend_config = []
 
     asset_file = "protomotions/data/assets/mjcf/t1_original.xml"
+    # asset_file = "protomotions/data/assets/mjcf/t1.xml"
 
     return EasyDict(
         extend_config=extend_config,
