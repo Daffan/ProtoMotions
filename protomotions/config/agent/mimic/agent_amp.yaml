@@ -14,6 +14,7 @@ agent:
     discriminator_reward_w: 1.0
 
     # Mimic parameters
+    num_mini_epochs: 10
     gradient_clip_val: 50.0
     clip_critic_loss: True
     eval_metric_keys: ["cartesian_err", "gt_err", "dv_rew", "kb_rew", "lr_rew", "rv_rew", "rav_rew", "gr_err", "gr_err_degrees"]
