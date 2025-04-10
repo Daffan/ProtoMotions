@@ -326,6 +326,12 @@ def t1_mapping():
             "parent_name": "right_hand_link",
             "pos": [0.0, -0.1471, 0.0],
             "rot": [1.0, 0.0, 0.0, 0.0]
+        },
+        {
+            "joint_name": "head_link",
+            "parent_name": "H2",
+            "pos": [0.01, 0, 0.11],
+            "rot": [1.0, 0.0, 0.0, 0.0]
         }
     ]
     # extend_config = []

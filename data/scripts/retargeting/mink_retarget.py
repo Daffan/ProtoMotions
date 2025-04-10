@@ -653,7 +653,7 @@ def retarget_motion(motion: SkeletonMotion, robot_type: str, render: bool = Fals
 
 
 def manually_retarget_motion(
-    amass_data: str, output_path: str, robot_type: str, render: bool = False
+    amass_data: str, output_path: str, robot_type: str, render: bool = True
 ):
     # Store retargeted motion data
     motion_data = dict(np.load(open(amass_data, "rb"), allow_pickle=True))

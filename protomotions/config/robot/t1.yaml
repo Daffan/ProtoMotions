@@ -8,6 +8,7 @@ robot:
     'Trunk',
     'H1',
     'H2',
+    'head_link',
     'AL1',
     'AL2',
     'AL3',
@@ -65,10 +66,10 @@ robot:
   # Observation parameters
   dof_obs_size: ${eval:${len:${.dof_body_ids}}*6}
   number_of_actions: 23
-  self_obs_max_coords_size: 418  # ${eval:1+25*(3+6+3+3)-3}
+  self_obs_max_coords_size: 433  # ${eval:1+25*(3+6+3+3)-3}
 
   # Control parameters
-  dof_body_ids: [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26]  # body ids that actually have dof
+  dof_body_ids: [1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27]  # body ids that actually have dof
   joint_axis: ['z', 'y', 'y', 'x', 'y', 'z', 'y', 'x', 'y', 'z', 'z', 'y', 'x', 'z', 'y', 'y', 'x', 'y', 'x', 'z', 'y', 'y', 'x']
   dof_effort_limits: [14.0, 14.0, 36.0, 36.0, 36.0, 36.0, 36.0, 36.0, 36.0, 36.0, 60.0, 90.0, 60.0, 60.0, 120.0, 40.0, 30.0, 90.0, 60.0, 60.0, 120.0, 40.0, 30.0]
   # dof_effort_limits: [7., 7., 18., 18., 18., 18., 18., 18., 18., 18., 30., 45., 30., 30., 60., 20., 15., 45., 30., 30., 60., 20., 15.]
@@ -78,11 +79,11 @@ robot:
   dof_armatures: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
   dof_joint_frictions: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
-  key_bodies: [ 'left_foot_link', 'right_foot_link', 'left_wrist_link', 'right_wrist_link' ]
+  key_bodies: [ 'left_foot_link', 'right_foot_link', 'left_wrist_link', 'right_wrist_link' , 'head_link']
   non_termination_contact_bodies: [ 'left_foot_link', 'right_foot_link', 'left_hand_link', 'right_hand_link' , 'left_wrist_link', 'right_wrist_link' ]
   right_foot_name: "right_foot_link"
   left_foot_name: "left_foot_link"
-  head_body_name: "H2"
+  head_body_name: "head_link"
 
   init_state:
     pos: [ 0.0, 0.0, 0.72 ] # x,y,z [m]

@@ -1259,6 +1259,19 @@ xyz="-0.000108 -0.109573 0.000591"
       velocity="12.4" />
   </joint>
   <!-- Extended links -->
+  <link name="head_link">
+    <visual>
+      <geometry>
+        <sphere radius="0.0001"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="head" type="fixed" dont_collapse="true">
+    <parent link="H2"/>
+    <child link="head_link"/>
+    <origin xyz="0.01 0 0.11" rpy="0 0 0"/>
+  </joint>
+
   <link name="left_wrist_link">
     <visual>
       <geometry>
